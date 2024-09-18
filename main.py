@@ -47,7 +47,7 @@ class Main:
             )
             
     def shortcut(self, event):
-        print(event)
+        print(event) # NEW
 
 
 if __name__ == "__main__":
