@@ -1,5 +1,5 @@
 import os
-from PIL import Image, ImageFilter, ImageOps
+from PIL import Image, ImageFilter, ImageOps, ImageTk
 
 cwd = os.path.dirname(os.path.abspath(__file__))
 os.chdir(cwd)
