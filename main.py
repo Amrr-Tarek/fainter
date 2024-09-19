@@ -13,7 +13,7 @@ class Main:
         # Window
         self.root = tk.Tk()
         self.root.geometry("1080x720")
-        self.root.title("Fainter")
+        self.root.title("Fainter") # LOL
 
         """
         # Background Image
