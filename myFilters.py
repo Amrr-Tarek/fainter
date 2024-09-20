@@ -62,9 +62,9 @@ def process_image(img: Image.Image, amt):
         "Rank Filter": 0,
         "Mode Filter": 0,
     }
-    filter = myDict.get("gaussian blur")
+    # filter = myDict.get("gaussian blur")
 
-    return img.filter(filter)
+    return img.filter(ImageFilter.GaussianBlur(amt))
 
 
 """

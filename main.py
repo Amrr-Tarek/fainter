@@ -14,7 +14,7 @@ class Main:
         self.root = tk.Tk()
         self.root.geometry("1080x720")
         self.root.title("Fainter")
-
+        
         """
         # Background Image
         self.bg_img = Image.open(rf"{os.path.dirname(__file__)}\angryimg.png")
@@ -127,12 +127,12 @@ class Main:
         file_path = self.dirEntry.get().strip()  # Absolute
         format = os.path.splitext(file_path)[-1][1:]
         # Process(self.root, file_path)
-        if not file_path:
-            Process(self.root)
-            return
-        else:
-            Process(self.root, file_path)
-            return
+        # if not file_path:
+        #     Process(self.root)
+        #     return
+        # else:
+        #     Process(self.root, file_path)
+        #     return
 
         if not file_path:
             pop_message("Please choose an image!", "info")
@@ -217,5 +217,5 @@ def pop_message(text, type="info"):
 if __name__ == "__main__":
     cwd = os.path.dirname(__file__)
     os.chdir(cwd)
-    # Main()
-    print(list(get_func_defaults(ImageFilter.Kernel).items()))
+    Main()
+    # print(list(get_func_defaults(ImageFilter.Kernel).items()))
