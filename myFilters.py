@@ -27,7 +27,7 @@ filters = [
     "MaxFilter",  # with rank
     "ModeFilter",  # size > 0 to 50 for performance
 ]
-presets = [
+kernel_presets = [
     "Blur",
     "Contour",
     "Detail",
@@ -53,18 +53,24 @@ filters = [
 ]
 
 
-def process_image(img: Image.Image, amt):
+def process_image(img: Image.Image, filter: str, radius: list = None):
     myDict = {
-        "Box Blur": 0,
-        "gaussian blur": 0,
+        "Box Blur": ImageFilter.BoxBlur,
+        "Gaussian Blur": ImageFilter.GaussianBlur,
         "Unsharp Mask": 0,
         "Kernel": 0,
         "Rank Filter": 0,
         "Mode Filter": 0,
     }
-    # filter = myDict.get("gaussian blur")
+    filterr = myDict.get(filter)
 
-    return img.filter(ImageFilter.GaussianBlur(amt))
+    if len(radius) == 1:
+        values = int(radius[0])
+    else:
+        values = radius
+
+    return img.filter(filterr((values)))
+
 
 
 """

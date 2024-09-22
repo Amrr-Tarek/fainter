@@ -14,7 +14,7 @@ class Main:
         self.root = tk.Tk()
         self.root.geometry("1080x720")
         self.root.title("Fainter")
-        
+
         """
         # Background Image
         self.bg_img = Image.open(rf"{os.path.dirname(__file__)}\angryimg.png")
@@ -147,7 +147,7 @@ class Main:
                 return
             # CREATE A TOPLEVEL WINDOW (NEW WINDOW)
             Process(self.root, file_path)
-            process_image(file_path)
+            # process_image(file_path)
         else:
             pop_message("Please provide an extension!", "info")
             return
@@ -177,22 +177,43 @@ class Process(tk.Toplevel):
         self.imageCanvas.grid(row=0, column=0, padx=10, pady=10)
         self.display_image(self.original_image)
 
-        self.filtersFrame = ttk.LabelFrame(self.frame, text="Apply Filters")
+        self.secondFrame = ttk.Frame(self.frame)
+        self.secondFrame.grid(row=0, column=1, padx=30, pady=15)
+
+        self.dropFrame = ttk.LabelFrame(self.secondFrame, text="Select a filter")
+        self.dropFrame.grid(row=0, column=1, padx=10, pady=10)
+
+        self.filtersDrop = ttk.Combobox(
+            self.dropFrame,
+            values=[
+                "Box Blur",
+                "Gaussian Blur",
+                "Unsharp Mask",
+                "Kernel",
+                "Rank Filter",
+                "Mode Filter",
+            ],
+            state="readonly",
+        )
+        self.filtersDrop.bind("<<ComboboxSelected>>", self.update_ui)
+        self.filtersDrop.grid(row=0, column=0, padx=10, pady=10)
+
+        self.applyFrame = ttk.LabelFrame(self.secondFrame, text="Apply Filters")
+        self.applyFrame.grid(row=1, column=1, padx=10, pady=10)
+
+        self.filtersFrame = ttk.Frame(self.applyFrame)
         self.filtersFrame.grid(row=0, column=1, padx=10, pady=10)
 
-        self.sliderControl = tk.Scale(
-            self.filtersFrame, from_=0, to=100, orient=tk.HORIZONTAL
-        )
-        self.sliderControl.set(10)
-        self.sliderControl.grid(row=0, column=1, padx=10, pady=10)
+        self.buttonsFrame = ttk.Frame(self.applyFrame)
+        self.buttonsFrame.grid(row=1, column=1, padx=0, pady=0)
 
         self.applyButton = ttk.Button(
-            self.filtersFrame, text="Apply Fitler", command=self.apply_filter
+            self.buttonsFrame, text="Apply Fitler", command=self.apply_filter
         )
         self.applyButton.grid(row=2, column=1, padx=5, pady=5)
 
         self.resetButton = ttk.Button(
-            self.filtersFrame,
+            self.buttonsFrame,
             text="Reset Filter",
             command=lambda: self.display_image(self.original_image),
         )
@@ -203,11 +224,120 @@ class Process(tk.Toplevel):
         self.tkImage = ImageTk.PhotoImage(img)
         self.imageCanvas.create_image(250, 250, anchor="c", image=self.tkImage)
 
-    def apply_filter(self):
-        self.processed_image = process_image(
-            self.original_image, self.sliderControl.get()
+    def forget_widgets(func):
+        def wrapper(self):
+            for widget in self.filtersFrame.winfo_children():
+                widget.grid_forget()
+            func(self)
+
+        return wrapper
+
+    def update_ui(self, event):
+        self.myOptions = {
+            "Box Blur": self.add_blur,
+            "Gaussian Blur": self.add_blur,
+            "Unsharp Mask": self.add_unsharp,
+            "Kernel": self.add_kernel,
+            "Rank Filter": self.add_rank,
+            "Mode Filter": self.add_mode,
+        }
+        self.filterSelect = self.filtersDrop.get()
+
+        print(self.filterSelect)
+        print(event)
+        self.myOptions.get(self.filterSelect)()
+
+    @forget_widgets
+    def add_blur(self):
+        self.sep_var = tk.BooleanVar()
+        self.separate = ttk.Checkbutton(
+            self.filtersFrame,
+            text="Separate Dimensions",
+            variable=self.sep_var,
+            command=self.gaussian_dims,
         )
+        self.separate.grid(row=1, column=2, padx=10, pady=10)
+
+        self.sliderX = tk.Scale(
+            self.filtersFrame, from_=0, to=100, orient=tk.HORIZONTAL
+        )
+        self.sliderX.set(50)
+
+        self.sliderY = tk.Scale(
+            self.filtersFrame, from_=0, to=100, orient=tk.HORIZONTAL
+        )
+        self.sliderY.set(100)
+
+        self.sliderControl = tk.Scale(
+            self.filtersFrame, from_=0, to=100, orient=tk.HORIZONTAL
+        )
+        self.sliderControl.set(10)
+
+        self.gaussian_dims()
+
+    def gaussian_dims(self):
+        if self.sep_var.get():
+            self.sliderControl.grid_forget()
+
+            self.sliderX.grid(row=1, column=0, padx=10, pady=10)
+            self.sliderY.grid(row=1, column=1, padx=10, pady=10)
+        else:
+            self.sliderX.grid_forget()
+            self.sliderY.grid_forget()
+
+            self.sliderControl.grid(row=1, column=1, padx=10, pady=10)
+
+    def add_unsharp(self):
+        pass
+
+    def add_kernel(self):
+        pass
+
+    def add_rank(self):
+        pass
+
+    def add_mode(self):
+        pass
+
+    def apply_filter(self):
+        self.myValues = {
+            "Box Blur": self.fetch_blur(),
+            "Gaussian Blur": self.fetch_blur(),
+            "Unsharp Mask": self.fetch_unsharp(),
+            "Kernel": self.fetch_kernel(),
+            "Rank Filter": self.fetch_rank(),
+            "Mode Filter": self.fetch_mode(),
+        }
+
+        self.processed_image = process_image(
+            self.original_image,
+            self.filterSelect,
+            self.myValues.get(self.filterSelect),
+        )
+
         self.display_image(self.processed_image)
+
+    def fetch_blur(self):
+        visible = []
+
+        for widget in self.filtersFrame.winfo_children():
+            if widget.winfo_viewable():
+                if isinstance(widget, tk.Scale):
+                    visible.append(widget.get())
+
+        return visible
+
+    def fetch_unsharp(self):
+        pass
+
+    def fetch_kernel(self):
+        pass
+
+    def fetch_rank(self):
+        pass
+
+    def fetch_mode(self):
+        pass
 
 
 def pop_message(text, type="info"):
