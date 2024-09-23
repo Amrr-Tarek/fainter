@@ -53,24 +53,53 @@ filters = [
 ]
 
 
-def process_image(img: Image.Image, filter: str, radius: list = None):
+def process_image(img: Image.Image, filter_name: str, values: list = None):
     myDict = {
-        "Box Blur": ImageFilter.BoxBlur,
-        "Gaussian Blur": ImageFilter.GaussianBlur,
-        "Unsharp Mask": 0,
-        "Kernel": 0,
-        "Rank Filter": 0,
-        "Mode Filter": 0,
+        "Box Blur": apply_box,
+        "Gaussian Blur": apply_gaussian,
+        "Unsharp Mask": apply_unsharp,
+        "Kernel": apply_kernel,
+        "Rank Filter": apply_rank,
+        "Mode Filter": apply_mode,
     }
-    filterr = myDict.get(filter)
+    filter = myDict.get(filter_name)(values)
+
+    return img.filter(filter)
+
+
+def apply_box(radius):
 
     if len(radius) == 1:
         values = int(radius[0])
     else:
         values = radius
 
-    return img.filter(filterr((values)))
+    return ImageFilter.BoxBlur(values)
 
+
+def apply_gaussian(radius):
+    if len(radius) == 1:
+        values = int(radius[0])
+    else:
+        values = radius
+
+    return ImageFilter.GaussianBlur(values)
+
+
+def apply_unsharp(values):
+    return ImageFilter.UnsharpMask(*values)
+
+
+def apply_kernel(values):
+    return ImageFilter.Kernel(*values)
+
+
+def apply_rank(values):
+    return ImageFilter.RankFilter(*values)
+
+
+def apply_mode(values):
+    return ImageFilter.ModeFilter(int(values[0]))
 
 
 """

@@ -147,7 +147,6 @@ class Main:
                 return
             # CREATE A TOPLEVEL WINDOW (NEW WINDOW)
             Process(self.root, file_path)
-            # process_image(file_path)
         else:
             pop_message("Please provide an extension!", "info")
             return
@@ -155,15 +154,11 @@ class Main:
 
 class Process(tk.Toplevel):
 
-    def __init__(
-        self,
-        parent,
-        img_path=r"D:\Courses\projects\fainter\medium.png",
-    ) -> None:
+    def __init__(self, parent, img_path) -> None:
         super().__init__(parent)
 
-        img_path = img_path.strip()
-        self.original_image = Image.open(img_path).convert("RGB")
+        self.img_path = img_path.strip()
+        self.original_image = Image.open(self.img_path).convert("RGB")
 
         self.frame = ttk.Frame(self)
         self.frame.pack()
@@ -227,7 +222,7 @@ class Process(tk.Toplevel):
     def forget_widgets(func):
         def wrapper(self):
             for widget in self.filtersFrame.winfo_children():
-                widget.grid_forget()
+                widget.destroy()
             func(self)
 
         return wrapper
@@ -268,16 +263,16 @@ class Process(tk.Toplevel):
         )
         self.sliderY.set(100)
 
-        self.sliderControl = tk.Scale(
+        self.blurSlider = tk.Scale(
             self.filtersFrame, from_=0, to=100, orient=tk.HORIZONTAL
         )
-        self.sliderControl.set(10)
+        self.blurSlider.set(10)
 
         self.gaussian_dims()
 
     def gaussian_dims(self):
         if self.sep_var.get():
-            self.sliderControl.grid_forget()
+            self.blurSlider.grid_forget()
 
             self.sliderX.grid(row=1, column=0, padx=10, pady=10)
             self.sliderY.grid(row=1, column=1, padx=10, pady=10)
@@ -285,59 +280,294 @@ class Process(tk.Toplevel):
             self.sliderX.grid_forget()
             self.sliderY.grid_forget()
 
-            self.sliderControl.grid(row=1, column=1, padx=10, pady=10)
+            self.blurSlider.grid(row=1, column=1, padx=10, pady=10)
 
+    @forget_widgets
     def add_unsharp(self):
-        pass
+        self.unsharp_radius = tk.Scale(
+            self.filtersFrame, from_=0, to=100, orient=tk.HORIZONTAL
+        )
+        self.unsharp_radius.set(2)
+        self.unsharp_radius.grid(row=0, column=1, padx=10, pady=10)
+        ttk.Label(self.filtersFrame, text="Radius").grid(row=0, column=2)
 
+        self.unsharp_percent = tk.Scale(
+            self.filtersFrame, from_=0, to=1000, orient=tk.HORIZONTAL
+        )
+        self.unsharp_percent.set(150)
+        self.unsharp_percent.grid(row=1, column=1, padx=10, pady=10)
+        ttk.Label(self.filtersFrame, text="Percent").grid(row=1, column=2)
+
+        self.unsharp_thres = tk.Scale(
+            self.filtersFrame, from_=0, to=255, orient=tk.HORIZONTAL
+        )
+        self.unsharp_thres.set(3)
+        self.unsharp_thres.grid(row=2, column=1, padx=10, pady=10)
+        ttk.Label(self.filtersFrame, text="Threshold").grid(row=2, column=2)
+
+    @forget_widgets
     def add_kernel(self):
-        pass
+        self.sizeFrame = ttk.LabelFrame(self.filtersFrame, text="Select Kernel Size:")
+        self.sizeFrame.grid(row=0, column=1, padx=5, pady=5)
+        self.kernelSize = ttk.Combobox(
+            self.sizeFrame,
+            values=["3x3", "5x5"],
+            state="readonly",
+        )
+        self.kernelSize.current(0)
+        self.kernelSize.bind("<<ComboboxSelected>>", self.update_kernel)
+        self.kernelSize.grid(row=0, column=1, padx=5, pady=5)
 
+        self.presetsFrame = ttk.LabelFrame(self.filtersFrame, text="Select Preset:")
+        self.presetsFrame.grid(row=1, column=1, padx=5, pady=5)
+        self.kernelPresets = ttk.Combobox(
+            self.presetsFrame,
+            values=[
+                "Blur",
+                "Contour",
+                "Detail",
+                "Enhance Edges",
+                "Enhance Edges (More)",
+                "Emboss",
+                "Find Edges",
+                "Sharpen",
+                "Smooth",
+                "Smooth (More)",
+            ],
+            state="readonly",
+        )
+        self.kernelPresets.bind("<<ComboboxSelected>>", self.apply_preset)
+        self.kernelPresets.grid(row=0, column=0, padx=5, pady=5)
+
+        self.validate_int = self.filtersFrame.register(self.validate_intgeter)
+
+        self.gridFrame = ttk.Frame(self.filtersFrame)
+        self.gridFrame.grid(row=2, column=1, padx=10, pady=10)
+        self.kernel_entries = []
+        self.update_kernel()
+
+        self.kernelScale = tk.Scale(
+            self.filtersFrame, from_=0, to=255, orient=tk.HORIZONTAL
+        )
+        self.kernelScale.grid(row=3, column=1, padx=10, pady=10)
+
+        self.kernelOffset = tk.Scale(
+            self.filtersFrame, from_=0, to=255, orient=tk.HORIZONTAL
+        )
+        self.kernelOffset.grid(row=4, column=1, padx=10, pady=10)
+
+    def update_kernel(self, event=None):
+        self.kernel_entries.clear()
+        for widget in self.gridFrame.winfo_children():
+            widget.destroy()
+
+        self.k_size = int(self.kernelSize.get()[0])
+
+        for i in range(1, self.k_size + 1):
+            for j in range(self.k_size):
+                entry = ttk.Entry(
+                    self.gridFrame,
+                    width=5,
+                    validate="key",
+                    validatecommand=(self.validate_int, "%P"),
+                )
+                entry.grid(row=i, column=j, padx=5, pady=2)
+                self.kernel_entries.append(entry)
+
+    def validate_intgeter(self, val):
+        if val == "":
+            return True
+
+        try:
+            float(val)
+            return True
+        except ValueError:
+            return False
+
+    def apply_preset(self, event):
+        # fmt: off
+        presets = {
+            "Blur": [
+                5, [
+                    1, 1, 1, 1, 1,
+                    1, 0, 0, 0, 1,
+                    1, 0, 0, 0, 1,
+                    1, 0, 0, 0, 1,
+                    1, 1, 1, 1, 1,
+                ], 16, 0
+            ],
+            "Contour": [
+                    3, [
+                        -1, -1, -1,
+                        -1,  8, -1,
+                        -1, -1, -1,
+                    ], 1, 255
+                ],
+            "Detail": [
+                    3, [
+                        0,  -1,  0,
+                        -1, 10, -1,
+                        0,  -1,  0,
+                    ], 6, 0
+                ],
+            "Enhance Edges": [
+                    3, [
+                        -1, -1, -1,
+                        -1, 10, -1,
+                        -1, -1, -1,
+                    ], 2, 0
+                ],
+            "Enhance Edges (More)": [
+                    3, [
+                        -1, -1, -1,
+                        -1,  9, -1,
+                        -1, -1, -1,
+                    ], 1, 0
+                ],
+            "Emboss": [
+                    3, [
+                        -1, 0, 0,
+                        0,  1, 0,
+                        0,  0, 0,
+                    ], 1, 128
+                ],
+            "Find Edges": [
+                    3, [
+                        -1, -1, -1,
+                        -1,  8, -1,
+                        -1, -1, -1,
+                    ], 1, 0
+                ],
+            "Sharpen": [
+                    3, [
+                        -2, -2, -2,
+                        -2, 32, -2,
+                        -2, -2, -2,
+                    ], 16, 0
+                ],
+            "Smooth": [
+                    3, [
+                        1, 1, 1,
+                        1, 5, 1,
+                        1, 1, 1,
+                    ], 13, 0
+                ],
+            "Smooth (More)": [
+                    5, [
+                        1, 1,  1, 1, 1,
+                        1, 5,  5, 5, 1,
+                        1, 5, 44, 5, 1,
+                        1, 5,  5, 5, 1,
+                        1, 1,  1, 1, 1,
+                    ], 100, 0
+                ],
+        }
+        # fmt: on
+        selected = self.kernelPresets.get()
+        values = presets.get(selected)
+
+        i_map = {3: 0, 5: 1}
+        self.kernelSize.current(i_map.get(values[0]))
+        self.update_kernel()
+
+        for i in range(len(values[1])):
+            self.kernel_entries[i].delete(0, tk.END)
+            self.kernel_entries[i].insert(0, values[1][i])
+
+        self.kernelScale.set(values[2])
+        self.kernelOffset.set(values[3])
+
+    @forget_widgets
     def add_rank(self):
-        pass
+        self.rankDrop = ttk.Combobox(
+            self.filtersFrame,
+            values=["Min Filter", "Median Filter", "Max Filter"],
+            state="readonly",
+        )
+        self.rankDrop.bind("<<ComboboxSelected>>", self.update_rank_presets)
+        self.rankDrop.grid(row=0, column=1, padx=10, pady=10)
 
+        self.rankSize = tk.Scale(
+            self.filtersFrame,
+            from_=3,
+            to=50,
+            orient=tk.HORIZONTAL,
+            command=lambda value: self.rankRank.config(to=max(0, int(value) ** 2 - 1)),
+            resolution=2,
+        )
+        self.rankSize.set(3)
+        self.rankSize.grid(row=1, column=1, padx=10, pady=10)
+        tk.Label(self.filtersFrame, text="Size").grid(row=1, column=2, padx=10, pady=10)
+
+        self.rankRank = tk.Scale(
+            self.filtersFrame,
+            from_=0,
+            to=self.rankSize.get() ** 2 - 1,
+            orient=tk.HORIZONTAL,
+        )
+        self.rankRank.set(self.rankSize.get() ** 2 / 2)
+        self.rankRank.grid(row=2, column=1, padx=10, pady=10)
+        tk.Label(self.filtersFrame, text="Rank").grid(row=2, column=2, padx=10, pady=10)
+
+    def update_rank_presets(self, event):
+        size = self.rankSize.get()
+        presets = {
+            "Min Filter": 0,
+            "Median Filter": int(size**2 / 2),
+            "Max Filter": int(size**2 - 1),
+        }
+
+        selected = self.rankDrop.get()
+        self.rankRank.set(presets.get(selected))
+
+    @forget_widgets
     def add_mode(self):
-        pass
+        self.modeSlider = tk.Scale(
+            self.filtersFrame, from_=0, to=50, orient=tk.HORIZONTAL
+        )
+        self.modeSlider.set(3)
+        self.modeSlider.grid(row=0, column=1, padx=10, pady=10)
 
     def apply_filter(self):
         self.myValues = {
-            "Box Blur": self.fetch_blur(),
-            "Gaussian Blur": self.fetch_blur(),
-            "Unsharp Mask": self.fetch_unsharp(),
-            "Kernel": self.fetch_kernel(),
-            "Rank Filter": self.fetch_rank(),
-            "Mode Filter": self.fetch_mode(),
+            "Box Blur": self.fetch_slider,
+            "Gaussian Blur": self.fetch_slider,
+            "Unsharp Mask": self.fetch_slider,
+            "Kernel": self.fetch_kernel,
+            "Rank Filter": self.fetch_slider,
+            "Mode Filter": self.fetch_slider,
         }
 
         self.processed_image = process_image(
             self.original_image,
             self.filterSelect,
-            self.myValues.get(self.filterSelect),
+            self.myValues.get(self.filterSelect)(),
         )
 
         self.display_image(self.processed_image)
 
-    def fetch_blur(self):
+    def fetch_slider(self):
         visible = []
 
         for widget in self.filtersFrame.winfo_children():
             if widget.winfo_viewable():
                 if isinstance(widget, tk.Scale):
-                    visible.append(widget.get())
-
+                    visible.append(int(widget.get()))
+        print(visible)
         return visible
 
-    def fetch_unsharp(self):
-        pass
-
     def fetch_kernel(self):
-        pass
-
-    def fetch_rank(self):
-        pass
-
-    def fetch_mode(self):
-        pass
+        try:
+            kernel = [float(entry.get()) for entry in self.kernel_entries]
+        except ValueError:
+            pop_message("Please insert the kernel values", type="error")
+            return
+        return [
+            (self.k_size,) * 2,
+            kernel,
+            float(self.kernelScale.get()),
+            float(self.kernelOffset.get()),
+        ]
 
 
 def pop_message(text, type="info"):
