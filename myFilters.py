@@ -1,56 +1,86 @@
 import os
 from PIL import Image, ImageFilter, ImageOps, ImageTk
 
-# cwd = os.path.dirname(os.path.abspath(__file__))
-# os.chdir(cwd)
-
 # Also see: https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html
 supported = {"png", "bmp", "jpeg", "jpg", "ico"}  # Wanted: WebP, GIF, TIFF
-filters = [
-    "BLUR",
-    "CONTOUR",
-    "DETAIL",
-    "EDGE_ENHANCE",
-    "EDGE_ENHANCE_MORE",
-    "EMBOSS",
-    "FIND_EDGES",
-    "SHARPEN",
-    "SMOOTH",
-    "SMOOTH_MORE",  # END OF PREDEFINED (USE KERNEL AND ADD THEM AS PRESETS)
-    "BoxBlur",  # radius x, y or 1 for both > 0
-    "GaussianBlur",  # radius x, y or 1 for both > 0
-    "UnsharpMask",  # radius > 0, percent > 0, threshold -> 0:255
-    "Kernel",  # L AND RGB ONLY !!!
-    "RankFilter",  # size: odd number >= 3, rank -> 0: (size * size / 2)
-    "MedianFilter",  # with rank
-    "MinFilter",  # with rank
-    "MaxFilter",  # with rank
-    "ModeFilter",  # size > 0 to 50 for performance
-]
-kernel_presets = [
-    "Blur",
-    "Contour",
-    "Detail",
-    "Enhance Edges",
-    "Enhance Edges (More)",
-    "Emboss",
-    "Find Edges",
-    "Sharpen",
-    "Smooth",
-    "Smooth (More)",
-]
-# هين
-filters = [
-    "Box Blur",
-    "Gaussian Blur",
-    "Unsharp Mask",
-    "Kernel",
-    "Rank Filter",
-    # "Median Filter",
-    # "Min Filter",
-    # "Max Filter",
-    "Mode Filter",
-]
+# fmt: off
+kernel_presets = {
+    "Blur": [
+        5, [
+            1, 1, 1, 1, 1,
+            1, 0, 0, 0, 1,
+            1, 0, 0, 0, 1,
+            1, 0, 0, 0, 1,
+            1, 1, 1, 1, 1,
+        ], 16, 0
+    ],
+    "Contour": [
+            3, [
+                -1, -1, -1,
+                -1,  8, -1,
+                -1, -1, -1,
+            ], 1, 255
+        ],
+    "Detail": [
+            3, [
+                0,  -1,  0,
+                -1, 10, -1,
+                0,  -1,  0,
+            ], 6, 0
+        ],
+    "Enhance Edges": [
+            3, [
+                -1, -1, -1,
+                -1, 10, -1,
+                -1, -1, -1,
+            ], 2, 0
+        ],
+    "Enhance Edges (More)": [
+            3, [
+                -1, -1, -1,
+                -1,  9, -1,
+                -1, -1, -1,
+            ], 1, 0
+        ],
+    "Emboss": [
+            3, [
+                -1, 0, 0,
+                0,  1, 0,
+                0,  0, 0,
+            ], 1, 128
+        ],
+    "Find Edges": [
+            3, [
+                -1, -1, -1,
+                -1,  8, -1,
+                -1, -1, -1,
+            ], 1, 0
+        ],
+    "Sharpen": [
+            3, [
+                -2, -2, -2,
+                -2, 32, -2,
+                -2, -2, -2,
+            ], 16, 0
+        ],
+    "Smooth": [
+            3, [
+                1, 1, 1,
+                1, 5, 1,
+                1, 1, 1,
+            ], 13, 0
+        ],
+    "Smooth (More)": [
+            5, [
+                1, 1,  1, 1, 1,
+                1, 5,  5, 5, 1,
+                1, 5, 44, 5, 1,
+                1, 5,  5, 5, 1,
+                1, 1,  1, 1, 1,
+            ], 100, 0
+        ],
+}
+# fmt: on
 
 
 def process_image(img: Image.Image, filter_name: str, values: list = None):
@@ -99,16 +129,11 @@ def apply_rank(values):
 
 
 def apply_mode(values):
-    return ImageFilter.ModeFilter(int(values[0]))
+    return ImageFilter.ModeFilter(values[0])
 
 
-"""
-Main:       Put the same dictionary and on each filter.. there is a function to call
-            each function adds the desired widgets
-            Apply button will call the process_image here.. and checks for what filter is used and based on it it takes the valeus from the sliders and numbers, etc
-
-myFilters:  Put the same dictionary and on each filter.. apply the attr wanted (this should be the easiest)
-"""
+# https://pillow.readthedocs.io/en/stable/reference/ImageFilter.html
+# Usage: img.filter(ImageFilter.FILTER())
 
 # https://pillow.readthedocs.io/en/stable/reference/ImageOps.html
 # Usage: ImageOps.FILTER(img)
@@ -135,23 +160,21 @@ ops = [
     "pad()",
 ]
 
-# https://pillow.readthedocs.io/en/stable/reference/ImageFilter.html
-# Usage: img.filter(ImageFilter.FILTER())
-
 
 """
-Program cons: No support for transparent
+Program cons:   No support for transparent
 Can be done by splitting the rgba channels, mergin rgb, applying the filters, merge the rgb with the alpha channel
+                Always converts to rgb before editing
 """
 
 
 def get_func_defaults(func):
     """_summary_
 
-    Args:
-        func (function): takes a function name
+    :args:
+        func: takes a function name
 
-    Returns:
+    :returns:
         dict: a dictionary of key: argument name, value: argument default (None if none)
     """
     import inspect
@@ -170,15 +193,3 @@ def get_func_defaults(func):
 
 if __name__ == "__main__":
     pass
-    # print(get_func_defaults(ImageFilter.Kernel))
-    # original_image = Image.open("medium.png").convert(
-    #     "RGB"
-    # )  # Temporarily Always convert into RGB
-    # apply_filter()
-
-    # processed_image.save("output.png")
-
-    # print(type(original_image))
-    # print(type(processed_image))
-    # print(type("sh"))
-    # process_image("medium.png")
