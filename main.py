@@ -6,6 +6,7 @@ from tkinter import filedialog, messagebox, PhotoImage, ttk
 from webbrowser import open as br_open
 
 
+
 class Main:
 
     def __init__(self) -> None:
@@ -131,11 +132,11 @@ class Main:
         
     def toggle_dark_mode(self):
         modes = {True: "dark", False: "light"}
-        self.style.theme_use(f"{"azure" if self.theme.get() == "azure" else "forest"}-{modes.get(self.mode.get())}")
+        self.style.theme_use(f"{"azure" if self.theme.get() == "azure" else "forest"}-{modes[self.mode.get()]}")
     
     def update_theme(self, prefix):
         self.style.theme_use(f"{prefix}-{"dark" if self.mode.get() else "light"}")
-
+        
     def on_close(self):
         if messagebox.askyesno(title="Quit?", message="Are you sure you want to Quit?"):
             self.root.destroy()
@@ -150,7 +151,7 @@ class Main:
                 ("Bitmap Image", "*.bmp"),
                 ("All Files", "*.*"),
             ),
-            initialdir=cwd,
+            initialdir=cwd, # change to os.path.expanduser("~") upon deployment
             title="Choose an image..",
         )
 
@@ -163,20 +164,20 @@ class Main:
         format = os.path.splitext(file_path)[-1][1:]
 
         if not file_path:
-            pop_message("Please choose an image!", "info")
+            messagebox.showinfo("Alert", "Please choose an image!")
             return
 
         if format:
             if not os.path.exists(file_path):
-                pop_message("Provided file doesn't exist!", "warning")
+                messagebox.showwarning("File not found!", "Provided file doesn't exist!")
                 return
             if format not in supported:
-                pop_message("Unsupported file extension!", "warning")
+                messagebox.showwarning("Alert", "Unsupported file extension!")
                 return
             # CREATE A TOPLEVEL WINDOW (NEW WINDOW)
             Process(self.root, file_path)
         else:
-            pop_message("Please provide an extension!", "info")
+            messagebox.showinfo("Alert", "Please provide an extension!")
             return
 
 
@@ -204,7 +205,7 @@ class Process(tk.Toplevel):
         self.secondFrame.grid(row=0, column=1, padx=30, pady=15)
 
         self.dropFrame = ttk.LabelFrame(self.secondFrame, text="Select a filter")
-        self.dropFrame.grid(row=0, column=1, padx=10, pady=10)
+        self.dropFrame.grid(row=0, column=0, padx=10, pady=10)
 
         self.filtersDrop = ttk.Combobox(
             self.dropFrame,
@@ -222,7 +223,7 @@ class Process(tk.Toplevel):
         self.filtersDrop.grid(row=0, column=0, padx=10, pady=10)
 
         self.applyFrame = ttk.LabelFrame(self.secondFrame, text="Apply Filters")
-        self.applyFrame.grid(row=1, column=1, padx=10, pady=10)
+        self.applyFrame.grid(row=1, column=0, padx=10, pady=10)
 
         self.filtersFrame = ttk.Frame(self.applyFrame)
         self.filtersFrame.grid(row=0, column=1, padx=10, pady=10)
@@ -242,6 +243,15 @@ class Process(tk.Toplevel):
             command=lambda: self.display_image(self.original_image),
         )
         self.resetButton.grid(row=2, column=1, padx=2, pady=2)
+        
+        self.saveFrame = ttk.LabelFrame(self.secondFrame, text="Save Image As")
+        self.saveFrame.grid(row=2, column=0, padx=10, pady=10)
+        
+        self.saveEntry = ttk.Entry(self.saveFrame, width=20)
+        self.saveEntry.grid(row=0, column=0, padx=5, pady=5)
+        
+        self.saveAs = ttk.Button(self.saveFrame, text="Save As..", command=self.browse_save, style="Accent.TButton")
+        self.saveAs.grid(row=0, column=1, padx=3)
 
     def display_image(self, img: Image.Image):
         img = img.resize((500, 500))
@@ -452,6 +462,17 @@ class Process(tk.Toplevel):
         )
         self.kernelOffset.grid(row=4, column=1, padx=5, pady=5, sticky="ew")
         ttk.Label(self.filtersFrame, text="Offset").grid(row=4, column=0)
+        
+        self.scaleDisableVar = tk.BooleanVar()
+        self.scaleDisable = ttk.Checkbutton(self.filtersFrame, text="Disable Scale", variable=self.scaleDisableVar)
+        self.scaleDisable.grid(row=5, column=0, columnspan=3, pady=10)
+        
+        self.scaleDisableVar.trace_add("write", self.toggle_scale)
+    
+    def toggle_scale(self, *args):
+        state_map = {True: "disabled", False: "normal"}
+        
+        self.kernelScale.config(state=state_map[self.scaleDisableVar.get()])
 
     def update_kernel(self, event=None):
         self.kernel_entries.clear()
@@ -472,7 +493,7 @@ class Process(tk.Toplevel):
                 self.kernel_entries.append(entry)
 
     def validate_integer(self, val):
-        if val == "":
+        if val in {'', '-', '+'}:
             return True
 
         try:
@@ -600,17 +621,16 @@ class Process(tk.Toplevel):
             int(self.unsharp_percent.get()),
             int(self.unsharp_thres.get()),
         ]
-
     def fetch_kernel(self):
         try:
             kernel = [float(entry.get()) for entry in self.kernel_entries]
         except ValueError:
-            pop_message("Please insert the kernel values", type="error")
+            messagebox.showerror("Alert", "Please insert the kernel values")
             return
         return [
             (self.k_size,) * 2,
             kernel,
-            round(self.kernelScale.get(), 2),
+            round(self.kernelScale.get(), 2) if not self.scaleDisableVar.get() else None,
             round(self.kernelOffset.get(), 2),
         ]
 
@@ -623,22 +643,49 @@ class Process(tk.Toplevel):
     def update_box(self, var, value=0):
         try:
             value = int(value)
-            var.configure(text=value)
+            var.config(text=value)
 
         except ValueError:
             try:
                 value = float(value)
-                var.configure(text=round(value, 2))
+                var.config(text=round(value, 2))
             except ValueError:
                 return
 
+    def browse_save(self) -> str:
+        file_path = filedialog.asksaveasfilename(
+            parent=self,
+            # defaultextension=".png",
+            filetypes=(
+                ("*", "*.png;*.jpg;*.jpeg;*.ico;*.bmp"),
+                ("PNG Image", "*.png"),
+                ("JPG/JPEG Image", "*.jpg;*.jpeg"),
+                ("ICON", "*.ico"),
+                ("Bitmap Image", "*.bmp"),
+                ("All Files", "*.*"),
+            ),
+            initialdir=cwd, # change to os.path.expanduser("~") upon deployment
+            title="Save image as..",
+        ) # returns the path selected by user
+        
+        if file_path:
+            self.saveEntry.delete(0, tk.END)
+            self.saveEntry.insert(0, file_path)
+    
+    def save_image(self): # <= save image using the saveEntry path and error handling here
+        pass
 
 def str_to_int(value):
     return round(float(value))
 
 
-def pop_message(text, type="info"):
-    messagebox.showinfo("Alert", text, icon=type)
+
+
+
+
+
+
+
 
 
 if __name__ == "__main__":
