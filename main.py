@@ -8,12 +8,12 @@ from webbrowser import open as br_open
 
 class Main:
 
-    def __init__(self) -> None:
+    def __init__(self):
         # Window
         self.root = tk.Tk()
         # self.root.geometry("1080x720")
         self.root.title("Fainter")
-
+        self.start(None)
         """
         # Background Image
         self.bg_img = Image.open(rf"{os.path.dirname(__file__)}\angryimg.png")
@@ -21,16 +21,21 @@ class Main:
         self.bg_label = tk.Label(self.root, image=self.bg_photo)
         self.bg_label.place(relheight=1, relwidth=1)
         """
-
+    
         # Applying Style
-        self.style = ttk.Style(self.root)
-        self.root.tk.call("source", "forest-light.tcl")
-        self.root.tk.call("source", "forest-dark.tcl")
-        self.root.tk.call("source", "azure.tcl")
-        self.root.tk.call("set_theme", "dark")
+    def start(self, old_path):
+
+        self.path1 = old_path
+
+        if (hasattr(self, "style") == False):
+            self.style = ttk.Style(self.root)
+            self.root.tk.call("source", "forest-light.tcl")
+            self.root.tk.call("source", "forest-dark.tcl")
+            self.root.tk.call("source", "azure.tcl")
+            self.root.tk.call("set_theme", "dark")
+
         self.mode = tk.BooleanVar(value=True)  # 0: light, 1: dark
         self.theme = tk.StringVar(value="azure")
-
         # Menu Bar
         self.menuBar = tk.Menu(self.root)
 
@@ -40,7 +45,7 @@ class Main:
         self.fileMenu.add_command(label="Close Project")  # Add a command
         self.fileMenu.add_separator()
         self.fileMenu.add_command(label="Quit!", command=self.on_close)
-
+        
         # Help Menu
         self.helpMenu = tk.Menu(self.menuBar, tearoff=0)
         self.helpMenu.add_command(
@@ -111,6 +116,10 @@ class Main:
 
         self.dirEntry = ttk.Entry(self.frame, width=70)
         self.dirEntry.grid(row=3, column=1, padx=10, pady=10)
+        
+        # Adding the old path if it exists
+        if self.path1:
+            self.dirEntry.insert(0, self.path1)
 
         self.dirButton = ttk.Button(
             self.frame, text="Browse", command=self.browse_open, style="Accent.TButton"
@@ -153,7 +162,6 @@ class Main:
             initialdir=cwd,
             title="Choose an image..",
         )
-
         if file_path:
             self.dirEntry.delete(0, tk.END)
             self.dirEntry.insert(0, file_path)
@@ -174,25 +182,34 @@ class Main:
                 pop_message("Unsupported file extension!", "warning")
                 return
             # CREATE A TOPLEVEL WINDOW (NEW WINDOW)
-            Process(self.root, file_path)
+            for widget in self.root.winfo_children():
+                widget.destroy()
+            Process(self.root, file_path, self)
         else:
             pop_message("Please provide an extension!", "info")
             return
 
+class Process:
 
-class Process(tk.Toplevel):
+    def __init__(self, parent, img_path, core) -> None:
 
-    def __init__(self, parent, img_path) -> None:
-        super().__init__(parent)
+        self.path = img_path
+        self.core = core
+        self.master = parent
 
         self.img_path = img_path.strip()
         self.original_image = Image.open(self.img_path).convert("RGB")
 
-        self.frame = ttk.Frame(self)
+        self.frame = ttk.Frame(parent)
         self.frame.pack()
 
         self.imageFrame = ttk.LabelFrame(self.frame, text="Image")
         self.imageFrame.grid(row=0, column=0, padx=30, pady=15)
+
+        # Back button (change it's position and parent if wanted.)
+
+        self.backButton = ttk.Button(parent, text="Back", command=self.clear)
+        self.backButton.pack(padx=20, pady=20)
 
         self.processed_image = None
 
@@ -242,6 +259,13 @@ class Process(tk.Toplevel):
             command=lambda: self.display_image(self.original_image),
         )
         self.resetButton.grid(row=2, column=1, padx=2, pady=2)
+
+    def clear(self):
+        for widget in self.master.winfo_children():
+            widget.destroy()
+        self.backButton.destroy()
+        Main.start(self.core, self.path)
+
 
     def display_image(self, img: Image.Image):
         img = img.resize((500, 500))
