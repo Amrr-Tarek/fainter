@@ -258,8 +258,12 @@ class Process(tk.Toplevel):
         self.saveAs.grid(row=0, column=1, padx=3, sticky="ew")
 
     def display_image(self, img: Image.Image):
-        width, height = tuple(map(min((800, 600)), img.size))
+        min_res = (180, 180)
+        max_res = (800, 800)
+
+        width, height = self.size_thres(img.size, min_res, max_res)
         img = img.resize((width, height))
+        print(img.size)
 
         self.tkImage = ImageTk.PhotoImage(img)
 
@@ -267,6 +271,38 @@ class Process(tk.Toplevel):
         self.imageCanvas.create_image(
             width / 2, height / 2, anchor="c", image=self.tkImage
         )
+
+    def size_thres(self, size, minimum, maximum):
+        if all(minimum[i] <= size[i] <= maximum[i] for i in range(2)):
+            return size
+
+        width, height = size
+
+        # Maximum
+        if any(size[i] > maximum[i] for i in range(2)):
+            max_width, max_height = maximum
+            scale_factor = min(max_width / width, max_height / height)
+
+            new_size = tuple(round(dim * scale_factor) for dim in size)
+
+            if any(new_size[i] < minimum[i] for i in range(2)):
+                messagebox.showwarning(
+                    "Bad Aspect ratio", "Image too wide or too thin (max)"
+                )
+                return maximum
+            return new_size
+
+        # Minimum
+        elif any(size[i] < maximum[i] for i in range(2)):
+            min_width, min_height = minimum
+            scale_factor = max(min_width / width, min_height / height)
+
+            new_size = tuple(round(dim * scale_factor) for dim in size)
+
+            if any(new_size[i] > maximum[i] for i in range(2)):
+                messagebox.showwarning("Bad Aspect ratio", "Image too wide or too thin")
+                return minimum
+            return new_size
 
     def forget_widgets(func):
         def wrapper(self: "Process"):
