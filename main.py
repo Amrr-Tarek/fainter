@@ -206,7 +206,7 @@ class Process:
         self.imageFrame = ttk.LabelFrame(self.frame, text="Image")
         self.imageFrame.grid(row=0, column=0, padx=30, pady=15)
 
-        # Back button (change it's position and parent if wanted)
+        # Back button (change it's position and parent if wanted.)
 
         self.backButton = ttk.Button(parent, text="Back", command=self.clear)
         self.backButton.pack(padx=20, pady=20)
