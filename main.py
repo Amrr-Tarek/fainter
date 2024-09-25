@@ -263,8 +263,8 @@ class Process:
     def clear(self):
         for widget in self.master.winfo_children():
             widget.destroy()
-            self.backButton.destroy()
-            Main.start(self.core, self.path)
+        self.backButton.destroy()
+        Main.start(self.core, self.path)
 
 
     def display_image(self, img: Image.Image):
