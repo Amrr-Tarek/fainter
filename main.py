@@ -13,23 +13,17 @@ class Main:
         self.root = tk.Tk()
         # self.root.geometry("1080x720")
         self.root.title("Fainter")
-        
-        self.start(None)
-    
+
         # Applying Style
-    def start(self, old_path):
-
-        self.path1 = old_path
-
-        if (hasattr(self, "style") == False):
-            self.style = ttk.Style(self.root)
-            self.root.tk.call("source", "forest-light.tcl")
-            self.root.tk.call("source", "forest-dark.tcl")
-            self.root.tk.call("source", "azure.tcl")
-            self.root.tk.call("set_theme", "dark")
+        self.style = ttk.Style(self.root)
+        self.root.tk.call("source", "forest-light.tcl")
+        self.root.tk.call("source", "forest-dark.tcl")
+        self.root.tk.call("source", "azure.tcl")
+        self.root.tk.call("set_theme", "dark")
 
         self.mode = tk.BooleanVar(value=True)  # 0: light, 1: dark
         self.theme = tk.StringVar(value="azure")
+
         # Menu Bar
         self.menuBar = tk.Menu(self.root)
 
@@ -39,7 +33,7 @@ class Main:
         self.fileMenu.add_command(label="Close Project")  # Add a command
         self.fileMenu.add_separator()
         self.fileMenu.add_command(label="Quit!", command=self.on_close)
-        
+
         # Help Menu
         self.helpMenu = tk.Menu(self.menuBar, tearoff=0)
         self.helpMenu.add_command(
@@ -77,6 +71,13 @@ class Main:
         self.menuBar.add_cascade(menu=self.viewMenu, label="View")
         self.root.config(menu=self.menuBar)
 
+        self.start(None)
+
+        self.root.mainloop()
+
+    def start(self, old_path):
+        self.path1 = old_path
+
         self.frame = ttk.Frame(self.root)
         self.frame.pack()
 
@@ -85,6 +86,7 @@ class Main:
             self.frame,
             text="Welcome to Fainter\nStart by Importing your image from the box down below",
             font=("Cairo", 22),
+            justify="c",
         )
         self.header.grid(row=0, column=0, columnspan=3, padx=10, pady=10)
 
@@ -93,6 +95,7 @@ class Main:
             self.frame,
             text="We are currently not supporting exporting images with Alpha channel",
             font=("Cairo", 18),
+            justify="c",
         ).grid(row=1, column=0, columnspan=3, padx=10, pady=10)
 
         # row 2
@@ -100,6 +103,7 @@ class Main:
             self.frame,
             text="Supported Formats:\nbmp, ico, jpg, jpeg, png",
             font=("Cairo", 14),
+            justify="c",
         ).grid(row=2, column=0, columnspan=3, padx=10, pady=30)
 
         # row 3
@@ -110,13 +114,13 @@ class Main:
 
         self.dirEntry = ttk.Entry(self.frame, width=70)
         self.dirEntry.grid(row=3, column=1, padx=10, pady=10)
-        
+
         # Adding the old path if it exists
         if self.path1:
             self.dirEntry.insert(0, self.path1)
 
         self.dirButton = ttk.Button(
-            self.frame, text="Browse", command=self.browse_open, style="Accent.TButton"
+            self.frame, text="Browse", command=self.pass_dir, style="Accent.TButton"
         )
         self.dirButton.grid(row=3, column=2, padx=10, pady=10)
 
@@ -130,7 +134,6 @@ class Main:
         self.proceed.grid(row=4, column=2, padx=10, pady=10)
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
-        self.root.mainloop()
 
     def toggle_dark_mode(self):
         modes = {True: "dark", False: "light"}
@@ -145,68 +148,54 @@ class Main:
         if messagebox.askyesno(title="Quit?", message="Are you sure you want to Quit?"):
             self.root.destroy()
 
-    def browse_open(self):
-        file_path = filedialog.askopenfilename(
-            filetypes=(
-                ("*", "*.png;*.jpg;*.jpeg;*.ico;*.bmp"),
-                ("PNG Image", "*.png"),
-                ("JPG/JPEG Image", "*.jpg;*.jpeg"),
-                ("ICON", "*.ico"),
-                ("Bitmap Image", "*.bmp"),
-                ("All Files", "*.*"),
-            ),
-            initialdir=cwd,  # change to os.path.expanduser("~") upon deployment
-            title="Choose an image..",
-        )
+    def pass_dir(self):
+        file_path = browse_open()
+
         if file_path:
             self.dirEntry.delete(0, tk.END)
             self.dirEntry.insert(0, file_path)
 
     def open_image(self):
         file_path = self.dirEntry.get().strip()  # Absolute
-        format = os.path.splitext(file_path)[-1][1:]
 
-        if not file_path:
-            messagebox.showinfo("Alert", "Please choose an image!")
-            return
+        if check_path(file_path):
+            self.frame.destroy()
 
-        if format:
-            if not os.path.exists(file_path):
-                messagebox.showwarning(
-                    "File not found!", "Provided file doesn't exist!"
-                )
-                return
-            if format not in supported:
-                messagebox.showwarning("Alert", "Unsupported file extension!")
-                return
             # CREATE A TOPLEVEL WINDOW (NEW WINDOW)
-            for widget in self.root.winfo_children():
-                widget.destroy()
-            Process(self.root, file_path, self)
-        else:
-            messagebox.showinfo("Alert", "Please provide an extension!")
-            return
+            Process(self, file_path)
+
 
 class Process:
 
-    def __init__(self, parent, img_path: str, core) -> None:
+    def __init__(self, parent: Main, img_path: str) -> None:
         self.path = img_path
-        self.core = core
-        self.master = parent
+        self.parent = parent
+        self.master = self.parent.root
 
         self.img_path = img_path.strip()
         self.original_image = Image.open(self.img_path).convert("RGB")
 
-        self.frame = ttk.Frame(parent)
+        self.frame = ttk.Frame(self.master)
         self.frame.pack()
 
         self.imageFrame = ttk.LabelFrame(self.frame, text="Image")
         self.imageFrame.grid(row=0, column=0, padx=30, pady=15)
 
-        # Back button (change it's position and parent if wanted.)
+        self.buttonsFrame = ttk.Frame(self.imageFrame)
+        self.buttonsFrame.grid(row=1)
 
-        self.backButton = ttk.Button(parent, text="Back", command=self.clear)
-        self.backButton.pack(padx=20, pady=20)
+        self.backButton = ttk.Button(
+            self.buttonsFrame, text="Back", command=self.clear_widgets
+        )
+        self.backButton.grid(row=0, column=0, padx=5, pady=10)
+
+        self.anotherButton = ttk.Button(
+            self.buttonsFrame,
+            text="Open Image",
+            command=self.open_another,
+            style="Accent.TButton",
+        )
+        self.anotherButton.grid(row=0, column=2, padx=5, pady=10)
 
         self.processed_image = None
 
@@ -275,12 +264,10 @@ class Process:
         )
         self.saveAs.grid(row=0, column=1, padx=3, sticky="ew")
 
-    def clear(self):
-        for widget in self.master.winfo_children():
-            widget.destroy()
-        self.backButton.destroy()
-        Main.start(self.core, self.path)
+    def clear_widgets(self):
+        self.frame.destroy()
 
+        self.parent.start(self.path)
 
     def display_image(self, img: Image.Image):
         min_res = (180, 180)
@@ -288,7 +275,6 @@ class Process:
 
         width, height = self.size_thres(img.size, min_res, max_res)
         img = img.resize((width, height))
-        print(img.size)
 
         self.tkImage = ImageTk.PhotoImage(img)
 
@@ -296,6 +282,15 @@ class Process:
         self.imageCanvas.create_image(
             width / 2, height / 2, anchor="c", image=self.tkImage
         )
+
+    def open_another(self):
+        file_path = browse_open()
+        if not file_path:  # feels unnecessary
+            return
+
+        if check_path(file_path):
+            self.original_image = Image.open(file_path).convert("RGB")
+            self.display_image(self.original_image)
 
     def size_thres(self, size, minimum, maximum):
         if all(minimum[i] <= size[i] <= maximum[i] for i in range(2)):
@@ -311,9 +306,7 @@ class Process:
             new_size = tuple(round(dim * scale_factor) for dim in size)
 
             if any(new_size[i] < minimum[i] for i in range(2)):
-                messagebox.showwarning(
-                    "Bad Aspect ratio", "Image too wide or too thin (max)"
-                )
+                messagebox.showwarning("Bad Aspect ratio", "Image too wide or too thin")
                 return maximum
             return new_size
 
@@ -587,6 +580,7 @@ class Process:
             self.kernel_entries[i].delete(0, tk.END)
             self.kernel_entries[i].insert(0, values[1][i])
 
+        self.scaleDisableVar.set(False)
         self.kernelScale.set(values[2])
         self.kernelOffset.set(values[3])
 
@@ -655,7 +649,7 @@ class Process:
             orient=tk.HORIZONTAL,
             comman=lambda value: self.update_box(self.me1, str_to_int(value)),
         )
-        self.modeSlider.set(3)
+        self.modeSlider.set(4)
         self.modeSlider.grid(row=0, column=1, padx=10, pady=10)
         ttk.Label(self.filtersFrame, text="Radius").grid(
             row=0, column=0, padx=2, pady=2
@@ -700,7 +694,8 @@ class Process:
             kernel = [float(entry.get()) for entry in self.kernel_entries]
         except ValueError:
             messagebox.showerror("Alert", "Please insert the kernel values")
-            return
+            raise Exception("Missing Kernel Values")
+
         return [
             (self.k_size,) * 2,
             kernel,
@@ -755,6 +750,44 @@ class Process:
     def save_image(self):
         # save image using the saveEntry path and error handling here
         pass
+
+
+def browse_open():
+    file_path = filedialog.askopenfilename(
+        filetypes=(
+            ("*", "*.png;*.jpg;*.jpeg;*.ico;*.bmp"),
+            ("PNG Image", "*.png"),
+            ("JPG/JPEG Image", "*.jpg;*.jpeg"),
+            ("ICON", "*.ico"),
+            ("Bitmap Image", "*.bmp"),
+            ("All Files", "*.*"),
+        ),
+        initialdir=cwd,  # change to os.path.expanduser("~") upon deployment
+        title="Choose an image..",
+    )
+    return file_path
+
+
+def check_path(file_path):
+    format = os.path.splitext(file_path)[-1][1:]
+
+    if not file_path:
+        messagebox.showinfo("Alert", "Please choose an image!")
+        return
+
+    if not format:
+        messagebox.showinfo("Alert", "Please provide an extension!")
+        return
+
+    if not os.path.exists(file_path):
+        messagebox.showwarning("File not found!", "Provided file doesn't exist!")
+        return
+
+    if format not in {"png"}:
+        messagebox.showwarning("Alert", "Unsupported file extension!")
+        return
+
+    return True
 
 
 def str_to_int(value):
