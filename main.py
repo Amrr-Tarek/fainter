@@ -13,14 +13,8 @@ class Main:
         self.root = tk.Tk()
         # self.root.geometry("1080x720")
         self.root.title("Fainter")
+        
         self.start(None)
-        """
-        # Background Image
-        self.bg_img = Image.open(rf"{os.path.dirname(__file__)}\angryimg.png")
-        self.bg_photo = ImageTk.PhotoImage(self.bg_img)
-        self.bg_label = tk.Label(self.root, image=self.bg_photo)
-        self.bg_label.place(relheight=1, relwidth=1)
-        """
     
         # Applying Style
     def start(self, old_path):
@@ -137,13 +131,15 @@ class Main:
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.mainloop()
-        
+
     def toggle_dark_mode(self):
         modes = {True: "dark", False: "light"}
-        self.style.theme_use(f"{"azure" if self.theme.get() == "azure" else "forest"}-{modes.get(self.mode.get())}")
-    
+        theme_name = "azure" if self.theme.get() == "azure" else "forest"
+        self.style.theme_use(f"{theme_name}-{modes[self.mode.get()]}")
+
     def update_theme(self, prefix):
-        self.style.theme_use(f"{prefix}-{"dark" if self.mode.get() else "light"}")
+        theme_mode = "dark" if self.mode.get() else "light"
+        self.style.theme_use(f"{prefix}-{theme_mode}")
 
     def on_close(self):
         if messagebox.askyesno(title="Quit?", message="Are you sure you want to Quit?"):
@@ -159,7 +155,7 @@ class Main:
                 ("Bitmap Image", "*.bmp"),
                 ("All Files", "*.*"),
             ),
-            initialdir=cwd,
+            initialdir=cwd,  # change to os.path.expanduser("~") upon deployment
             title="Choose an image..",
         )
         if file_path:
@@ -171,28 +167,29 @@ class Main:
         format = os.path.splitext(file_path)[-1][1:]
 
         if not file_path:
-            pop_message("Please choose an image!", "info")
+            messagebox.showinfo("Alert", "Please choose an image!")
             return
 
         if format:
             if not os.path.exists(file_path):
-                pop_message("Provided file doesn't exist!", "warning")
+                messagebox.showwarning(
+                    "File not found!", "Provided file doesn't exist!"
+                )
                 return
             if format not in supported:
-                pop_message("Unsupported file extension!", "warning")
+                messagebox.showwarning("Alert", "Unsupported file extension!")
                 return
             # CREATE A TOPLEVEL WINDOW (NEW WINDOW)
             for widget in self.root.winfo_children():
                 widget.destroy()
             Process(self.root, file_path, self)
         else:
-            pop_message("Please provide an extension!", "info")
+            messagebox.showinfo("Alert", "Please provide an extension!")
             return
 
 class Process:
 
-    def __init__(self, parent, img_path, core) -> None:
-
+    def __init__(self, parent, img_path: str, core) -> None:
         self.path = img_path
         self.core = core
         self.master = parent
@@ -213,7 +210,7 @@ class Process:
 
         self.processed_image = None
 
-        self.imageCanvas = tk.Canvas(self.imageFrame, width=500, height=500)
+        self.imageCanvas = tk.Canvas(self.imageFrame)
         self.imageCanvas.grid(row=0, column=0, padx=10, pady=10)
         self.display_image(self.original_image)
 
@@ -221,7 +218,7 @@ class Process:
         self.secondFrame.grid(row=0, column=1, padx=30, pady=15)
 
         self.dropFrame = ttk.LabelFrame(self.secondFrame, text="Select a filter")
-        self.dropFrame.grid(row=0, column=1, padx=10, pady=10)
+        self.dropFrame.grid(row=0, column=0, padx=10, pady=10)
 
         self.filtersDrop = ttk.Combobox(
             self.dropFrame,
@@ -239,7 +236,7 @@ class Process:
         self.filtersDrop.grid(row=0, column=0, padx=10, pady=10)
 
         self.applyFrame = ttk.LabelFrame(self.secondFrame, text="Apply Filters")
-        self.applyFrame.grid(row=1, column=1, padx=10, pady=10)
+        self.applyFrame.grid(row=1, column=0, padx=10, pady=10)
 
         self.filtersFrame = ttk.Frame(self.applyFrame)
         self.filtersFrame.grid(row=0, column=1, padx=10, pady=10)
@@ -249,7 +246,10 @@ class Process:
         self.buttonsFrame.grid(row=1, column=1, padx=5, pady=5)
 
         self.applyButton = ttk.Button(
-            self.buttonsFrame, text="Apply Fitler", command=self.apply_filter, style="Accent.TButton"
+            self.buttonsFrame,
+            text="Apply Fitler",
+            command=self.apply_filter,
+            style="Accent.TButton",
         )
         self.applyButton.grid(row=2, column=0, padx=2, pady=2)
 
@@ -260,6 +260,21 @@ class Process:
         )
         self.resetButton.grid(row=2, column=1, padx=2, pady=2)
 
+        self.saveFrame = ttk.LabelFrame(self.secondFrame, text="Save Image As")
+        self.saveFrame.columnconfigure(0, weight=1)
+        self.saveFrame.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
+
+        self.saveEntry = ttk.Entry(self.saveFrame)
+        self.saveEntry.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+
+        self.saveAs = ttk.Button(
+            self.saveFrame,
+            text="Save As..",
+            command=self.browse_save,
+            style="Accent.TButton",
+        )
+        self.saveAs.grid(row=0, column=1, padx=3, sticky="ew")
+
     def clear(self):
         for widget in self.master.winfo_children():
             widget.destroy()
@@ -268,12 +283,54 @@ class Process:
 
 
     def display_image(self, img: Image.Image):
-        img = img.resize((500, 500))
+        min_res = (180, 180)
+        max_res = (800, 800)
+
+        width, height = self.size_thres(img.size, min_res, max_res)
+        img = img.resize((width, height))
+        print(img.size)
+
         self.tkImage = ImageTk.PhotoImage(img)
-        self.imageCanvas.create_image(250, 250, anchor="c", image=self.tkImage)
+
+        self.imageCanvas.config(width=width, height=height)
+        self.imageCanvas.create_image(
+            width / 2, height / 2, anchor="c", image=self.tkImage
+        )
+
+    def size_thres(self, size, minimum, maximum):
+        if all(minimum[i] <= size[i] <= maximum[i] for i in range(2)):
+            return size
+
+        width, height = size
+
+        # Maximum
+        if any(size[i] > maximum[i] for i in range(2)):
+            max_width, max_height = maximum
+            scale_factor = min(max_width / width, max_height / height)
+
+            new_size = tuple(round(dim * scale_factor) for dim in size)
+
+            if any(new_size[i] < minimum[i] for i in range(2)):
+                messagebox.showwarning(
+                    "Bad Aspect ratio", "Image too wide or too thin (max)"
+                )
+                return maximum
+            return new_size
+
+        # Minimum
+        elif any(size[i] < maximum[i] for i in range(2)):
+            min_width, min_height = minimum
+            scale_factor = max(min_width / width, min_height / height)
+
+            new_size = tuple(round(dim * scale_factor) for dim in size)
+
+            if any(new_size[i] > maximum[i] for i in range(2)):
+                messagebox.showwarning("Bad Aspect ratio", "Image too wide or too thin")
+                return minimum
+            return new_size
 
     def forget_widgets(func):
-        def wrapper(self):
+        def wrapper(self: "Process"):
             for widget in self.filtersFrame.winfo_children():
                 widget.destroy()
             func(self)
@@ -304,32 +361,6 @@ class Process:
         )
         self.separate.grid(row=2, column=0, columnspan=3, padx=10, pady=10)
 
-        self.be1 = ttk.Label(self.filtersFrame, width=8, anchor="c")
-        self.sliderX = ttk.Scale(
-            self.filtersFrame,
-            from_=0,
-            to=100,
-            orient=tk.HORIZONTAL,
-            command=lambda value: self.update_box(self.be1, value),
-        )
-        self.sliderX.set(50)
-        self.x_label = ttk.Label(
-            self.filtersFrame, text="Radius X", anchor="c", width=8
-        )
-
-        self.be2 = ttk.Label(self.filtersFrame, width=8, anchor="c")
-        self.sliderY = ttk.Scale(
-            self.filtersFrame,
-            from_=0,
-            to=100,
-            orient=tk.HORIZONTAL,
-            command=lambda value: self.update_box(self.be2, value),
-        )
-        self.sliderY.set(100)
-        self.y_label = ttk.Label(
-            self.filtersFrame, text="Radius Y", anchor="c", width=8
-        )
-
         self.be3 = ttk.Label(self.filtersFrame, width=8, anchor="c")
         self.blurSlider = ttk.Scale(
             self.filtersFrame,
@@ -343,6 +374,30 @@ class Process:
             self.filtersFrame, text="Radius", anchor="c", width=8
         )
 
+        self.be1 = ttk.Label(self.filtersFrame, width=8, anchor="c")
+        self.sliderX = ttk.Scale(
+            self.filtersFrame,
+            from_=0,
+            to=100,
+            orient=tk.HORIZONTAL,
+            command=lambda value: self.update_box(self.be1, value),
+        )
+        self.x_label = ttk.Label(
+            self.filtersFrame, text="Radius X", anchor="c", width=8
+        )
+
+        self.be2 = ttk.Label(self.filtersFrame, width=8, anchor="c")
+        self.sliderY = ttk.Scale(
+            self.filtersFrame,
+            from_=0,
+            to=100,
+            orient=tk.HORIZONTAL,
+            command=lambda value: self.update_box(self.be2, value),
+        )
+        self.y_label = ttk.Label(
+            self.filtersFrame, text="Radius Y", anchor="c", width=8
+        )
+
         self.gaussian_dims()
 
     def gaussian_dims(self):
@@ -352,10 +407,12 @@ class Process:
             self.rad_label.grid_forget()
 
             self.be1.grid(row=0, column=0)
+            self.sliderX.set(self.blurSlider.get())
             self.sliderX.grid(row=0, column=1, padx=10, pady=10)
             self.x_label.grid(row=0, column=2, padx=5, pady=5)
 
             self.be2.grid(row=1, column=0)
+            self.sliderY.set(self.blurSlider.get())
             self.sliderY.grid(row=1, column=1, padx=10, pady=10)
             self.y_label.grid(row=1, column=2, padx=5, pady=5)
         else:
@@ -450,7 +507,7 @@ class Process:
 
         self.gridFrame = ttk.Frame(self.filtersFrame)
         self.gridFrame.grid(row=2, column=0, columnspan=3, padx=10, pady=10)
-        self.kernel_entries = []
+        self.kernel_entries: list[tk.Entry] = []
         self.update_kernel()
 
         self.ke1 = ttk.Label(self.filtersFrame, width=6, anchor=tk.CENTER, text=0)
@@ -477,6 +534,19 @@ class Process:
         self.kernelOffset.grid(row=4, column=1, padx=5, pady=5, sticky="ew")
         ttk.Label(self.filtersFrame, text="Offset").grid(row=4, column=0)
 
+        self.scaleDisableVar = tk.BooleanVar()
+        self.scaleDisable = ttk.Checkbutton(
+            self.filtersFrame, text="Disable Scale", variable=self.scaleDisableVar
+        )
+        self.scaleDisable.grid(row=5, column=0, columnspan=3, pady=10)
+
+        self.scaleDisableVar.trace_add("write", self.toggle_scale)
+
+    def toggle_scale(self, *args):
+        state_map = {True: "disabled", False: "normal"}
+
+        self.kernelScale.config(state=state_map[self.scaleDisableVar.get()])
+
     def update_kernel(self, event=None):
         self.kernel_entries.clear()
         for widget in self.gridFrame.winfo_children():
@@ -496,7 +566,7 @@ class Process:
                 self.kernel_entries.append(entry)
 
     def validate_integer(self, val):
-        if val == "":
+        if val in {"", "-", "+"}:
             return True
 
         try:
@@ -506,7 +576,6 @@ class Process:
             return False
 
     def apply_preset(self, event):
-
         selected = self.kernelPresets.get()
         values = kernel_presets.get(selected)
 
@@ -542,6 +611,7 @@ class Process:
             orient=tk.HORIZONTAL,
             command=lambda value: (
                 self.rankRank.config(to=max(0, str_to_int(value) ** 2 - 1)),
+                self.rankRank.set(min(self.rankRank.get(), str_to_int(value) ** 2 - 1)),
                 self.update_box(self.re1, str_to_int(value)),
             ),
             resolution=2,
@@ -629,40 +699,66 @@ class Process:
         try:
             kernel = [float(entry.get()) for entry in self.kernel_entries]
         except ValueError:
-            pop_message("Please insert the kernel values", type="error")
+            messagebox.showerror("Alert", "Please insert the kernel values")
             return
         return [
             (self.k_size,) * 2,
             kernel,
-            round(self.kernelScale.get(), 2),
+            (
+                round(self.kernelScale.get(), 2)
+                if not self.scaleDisableVar.get()
+                else None
+            ),
             round(self.kernelOffset.get(), 2),
         ]
 
     def fetch_rank(self):
-        return [round(i) for i in [self.rankSize.get(), self.rankRank.get()]]
+        size = self.rankSize.get()
+        rank = self.rankRank.get()
+        return list(map(round, [size, rank]))
 
     def fetch_mode(self):
         return [round(self.modeSlider.get())]
 
-    def update_box(self, var, value=0):
+    def update_box(self, var: tk.Label, value=0):
         try:
             value = int(value)
-            var.configure(text=value)
+            var.config(text=value)
 
         except ValueError:
             try:
                 value = float(value)
-                var.configure(text=round(value, 2))
+                var.config(text=round(value, 2))
             except ValueError:
                 return
+
+    def browse_save(self) -> str:
+        file_path = filedialog.asksaveasfilename(
+            parent=self,
+            # defaultextension=".png",
+            filetypes=(
+                ("*", "*.png;*.jpg;*.jpeg;*.ico;*.bmp"),
+                ("PNG Image", "*.png"),
+                ("JPG/JPEG Image", "*.jpg;*.jpeg"),
+                ("ICON", "*.ico"),
+                ("Bitmap Image", "*.bmp"),
+                ("All Files", "*.*"),
+            ),
+            initialdir=cwd,  # change to os.path.expanduser("~") upon deployment
+            title="Save image as..",
+        )  # returns the path selected by user
+
+        if file_path:
+            self.saveEntry.delete(0, tk.END)
+            self.saveEntry.insert(0, file_path)
+
+    def save_image(self):
+        # save image using the saveEntry path and error handling here
+        pass
 
 
 def str_to_int(value):
     return round(float(value))
-
-
-def pop_message(text, type="info"):
-    messagebox.showinfo("Alert", text, icon=type)
 
 
 if __name__ == "__main__":
