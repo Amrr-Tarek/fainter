@@ -178,7 +178,7 @@ class Main:
 
 class Process(tk.Toplevel):
 
-    def __init__(self, parent, img_path) -> None:
+    def __init__(self, parent, img_path: str) -> None:
         super().__init__(parent)
 
         self.img_path = img_path.strip()
@@ -192,7 +192,7 @@ class Process(tk.Toplevel):
 
         self.processed_image = None
 
-        self.imageCanvas = tk.Canvas(self.imageFrame, width=500, height=500)
+        self.imageCanvas = tk.Canvas(self.imageFrame)
         self.imageCanvas.grid(row=0, column=0, padx=10, pady=10)
         self.display_image(self.original_image)
 
@@ -243,10 +243,11 @@ class Process(tk.Toplevel):
         self.resetButton.grid(row=2, column=1, padx=2, pady=2)
 
         self.saveFrame = ttk.LabelFrame(self.secondFrame, text="Save Image As")
-        self.saveFrame.grid(row=2, column=0, padx=10, pady=10)
+        self.saveFrame.columnconfigure(0, weight=1)
+        self.saveFrame.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
 
-        self.saveEntry = ttk.Entry(self.saveFrame, width=20)
-        self.saveEntry.grid(row=0, column=0, padx=5, pady=5)
+        self.saveEntry = ttk.Entry(self.saveFrame)
+        self.saveEntry.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
 
         self.saveAs = ttk.Button(
             self.saveFrame,
@@ -254,15 +255,21 @@ class Process(tk.Toplevel):
             command=self.browse_save,
             style="Accent.TButton",
         )
-        self.saveAs.grid(row=0, column=1, padx=3)
+        self.saveAs.grid(row=0, column=1, padx=3, sticky="ew")
 
     def display_image(self, img: Image.Image):
-        img = img.resize((500, 500))
+        width, height = tuple(map(min((800, 600)), img.size))
+        img = img.resize((width, height))
+
         self.tkImage = ImageTk.PhotoImage(img)
-        self.imageCanvas.create_image(250, 250, anchor="c", image=self.tkImage)
+
+        self.imageCanvas.config(width=width, height=height)
+        self.imageCanvas.create_image(
+            width / 2, height / 2, anchor="c", image=self.tkImage
+        )
 
     def forget_widgets(func):
-        def wrapper(self):
+        def wrapper(self: "Process"):
             for widget in self.filtersFrame.winfo_children():
                 widget.destroy()
             func(self)
@@ -293,32 +300,6 @@ class Process(tk.Toplevel):
         )
         self.separate.grid(row=2, column=0, columnspan=3, padx=10, pady=10)
 
-        self.be1 = ttk.Label(self.filtersFrame, width=8, anchor="c")
-        self.sliderX = ttk.Scale(
-            self.filtersFrame,
-            from_=0,
-            to=100,
-            orient=tk.HORIZONTAL,
-            command=lambda value: self.update_box(self.be1, value),
-        )
-        self.sliderX.set(50)
-        self.x_label = ttk.Label(
-            self.filtersFrame, text="Radius X", anchor="c", width=8
-        )
-
-        self.be2 = ttk.Label(self.filtersFrame, width=8, anchor="c")
-        self.sliderY = ttk.Scale(
-            self.filtersFrame,
-            from_=0,
-            to=100,
-            orient=tk.HORIZONTAL,
-            command=lambda value: self.update_box(self.be2, value),
-        )
-        self.sliderY.set(100)
-        self.y_label = ttk.Label(
-            self.filtersFrame, text="Radius Y", anchor="c", width=8
-        )
-
         self.be3 = ttk.Label(self.filtersFrame, width=8, anchor="c")
         self.blurSlider = ttk.Scale(
             self.filtersFrame,
@@ -332,6 +313,30 @@ class Process(tk.Toplevel):
             self.filtersFrame, text="Radius", anchor="c", width=8
         )
 
+        self.be1 = ttk.Label(self.filtersFrame, width=8, anchor="c")
+        self.sliderX = ttk.Scale(
+            self.filtersFrame,
+            from_=0,
+            to=100,
+            orient=tk.HORIZONTAL,
+            command=lambda value: self.update_box(self.be1, value),
+        )
+        self.x_label = ttk.Label(
+            self.filtersFrame, text="Radius X", anchor="c", width=8
+        )
+
+        self.be2 = ttk.Label(self.filtersFrame, width=8, anchor="c")
+        self.sliderY = ttk.Scale(
+            self.filtersFrame,
+            from_=0,
+            to=100,
+            orient=tk.HORIZONTAL,
+            command=lambda value: self.update_box(self.be2, value),
+        )
+        self.y_label = ttk.Label(
+            self.filtersFrame, text="Radius Y", anchor="c", width=8
+        )
+
         self.gaussian_dims()
 
     def gaussian_dims(self):
@@ -341,10 +346,12 @@ class Process(tk.Toplevel):
             self.rad_label.grid_forget()
 
             self.be1.grid(row=0, column=0)
+            self.sliderX.set(self.blurSlider.get())
             self.sliderX.grid(row=0, column=1, padx=10, pady=10)
             self.x_label.grid(row=0, column=2, padx=5, pady=5)
 
             self.be2.grid(row=1, column=0)
+            self.sliderY.set(self.blurSlider.get())
             self.sliderY.grid(row=1, column=1, padx=10, pady=10)
             self.y_label.grid(row=1, column=2, padx=5, pady=5)
         else:
@@ -439,7 +446,7 @@ class Process(tk.Toplevel):
 
         self.gridFrame = ttk.Frame(self.filtersFrame)
         self.gridFrame.grid(row=2, column=0, columnspan=3, padx=10, pady=10)
-        self.kernel_entries = []
+        self.kernel_entries: list[tk.Entry] = []
         self.update_kernel()
 
         self.ke1 = ttk.Label(self.filtersFrame, width=6, anchor=tk.CENTER, text=0)
@@ -508,7 +515,6 @@ class Process(tk.Toplevel):
             return False
 
     def apply_preset(self, event):
-
         selected = self.kernelPresets.get()
         values = kernel_presets.get(selected)
 
@@ -544,6 +550,7 @@ class Process(tk.Toplevel):
             orient=tk.HORIZONTAL,
             command=lambda value: (
                 self.rankRank.config(to=max(0, str_to_int(value) ** 2 - 1)),
+                self.rankRank.set(min(self.rankRank.get(), str_to_int(value) ** 2 - 1)),
                 self.update_box(self.re1, str_to_int(value)),
             ),
             resolution=2,
@@ -645,12 +652,14 @@ class Process(tk.Toplevel):
         ]
 
     def fetch_rank(self):
-        return [round(i) for i in [self.rankSize.get(), self.rankRank.get()]]
+        size = self.rankSize.get()
+        rank = self.rankRank.get()
+        return list(map(round, [size, rank]))
 
     def fetch_mode(self):
         return [round(self.modeSlider.get())]
 
-    def update_box(self, var, value=0):
+    def update_box(self, var: tk.Label, value=0):
         try:
             value = int(value)
             var.config(text=value)
@@ -682,9 +691,8 @@ class Process(tk.Toplevel):
             self.saveEntry.delete(0, tk.END)
             self.saveEntry.insert(0, file_path)
 
-    def save_image(
-        self,
-    ):  # <= save image using the saveEntry path and error handling here
+    def save_image(self):
+        # save image using the saveEntry path and error handling here
         pass
 
 

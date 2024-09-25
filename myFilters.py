@@ -1,5 +1,6 @@
 import os
 from PIL import Image, ImageFilter, ImageOps, ImageTk
+from tkinter import messagebox
 
 
 # Also see: https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html
@@ -96,6 +97,7 @@ def process_image(img: Image.Image, filter_name: str, values: list = None):
     filter = myDict.get(filter_name)(values)
 
     return img.filter(filter)
+
 
 
 def apply_box(radius):
