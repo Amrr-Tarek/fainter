@@ -1,6 +1,7 @@
 import os
 from PIL import Image, ImageFilter, ImageOps, ImageTk
 
+
 # Also see: https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html
 supported = {"png", "bmp", "jpeg", "jpg", "ico"}  # Wanted: WebP, GIF, TIFF
 # fmt: off

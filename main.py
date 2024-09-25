@@ -6,7 +6,6 @@ from tkinter import filedialog, messagebox, PhotoImage, ttk
 from webbrowser import open as br_open
 
 
-
 class Main:
 
     def __init__(self) -> None:
@@ -14,14 +13,6 @@ class Main:
         self.root = tk.Tk()
         # self.root.geometry("1080x720")
         self.root.title("Fainter")
-
-        """
-        # Background Image
-        self.bg_img = Image.open(rf"{os.path.dirname(__file__)}\angryimg.png")
-        self.bg_photo = ImageTk.PhotoImage(self.bg_img)
-        self.bg_label = tk.Label(self.root, image=self.bg_photo)
-        self.bg_label.place(relheight=1, relwidth=1)
-        """
 
         # Applying Style
         self.style = ttk.Style(self.root)
@@ -129,14 +120,16 @@ class Main:
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.mainloop()
-        
+
     def toggle_dark_mode(self):
         modes = {True: "dark", False: "light"}
-        self.style.theme_use(f"{"azure" if self.theme.get() == "azure" else "forest"}-{modes[self.mode.get()]}")
-    
+        theme_name = "azure" if self.theme.get() == "azure" else "forest"
+        self.style.theme_use(f"{theme_name}-{modes[self.mode.get()]}")
+
     def update_theme(self, prefix):
-        self.style.theme_use(f"{prefix}-{"dark" if self.mode.get() else "light"}")
-        
+        theme_mode = "dark" if self.mode.get() else "light"
+        self.style.theme_use(f"{prefix}-{theme_mode}")
+
     def on_close(self):
         if messagebox.askyesno(title="Quit?", message="Are you sure you want to Quit?"):
             self.root.destroy()
@@ -151,7 +144,7 @@ class Main:
                 ("Bitmap Image", "*.bmp"),
                 ("All Files", "*.*"),
             ),
-            initialdir=cwd, # change to os.path.expanduser("~") upon deployment
+            initialdir=cwd,  # change to os.path.expanduser("~") upon deployment
             title="Choose an image..",
         )
 
@@ -169,7 +162,9 @@ class Main:
 
         if format:
             if not os.path.exists(file_path):
-                messagebox.showwarning("File not found!", "Provided file doesn't exist!")
+                messagebox.showwarning(
+                    "File not found!", "Provided file doesn't exist!"
+                )
                 return
             if format not in supported:
                 messagebox.showwarning("Alert", "Unsupported file extension!")
@@ -233,7 +228,10 @@ class Process(tk.Toplevel):
         self.buttonsFrame.grid(row=1, column=1, padx=5, pady=5)
 
         self.applyButton = ttk.Button(
-            self.buttonsFrame, text="Apply Fitler", command=self.apply_filter, style="Accent.TButton"
+            self.buttonsFrame,
+            text="Apply Fitler",
+            command=self.apply_filter,
+            style="Accent.TButton",
         )
         self.applyButton.grid(row=2, column=0, padx=2, pady=2)
 
@@ -243,14 +241,19 @@ class Process(tk.Toplevel):
             command=lambda: self.display_image(self.original_image),
         )
         self.resetButton.grid(row=2, column=1, padx=2, pady=2)
-        
+
         self.saveFrame = ttk.LabelFrame(self.secondFrame, text="Save Image As")
         self.saveFrame.grid(row=2, column=0, padx=10, pady=10)
-        
+
         self.saveEntry = ttk.Entry(self.saveFrame, width=20)
         self.saveEntry.grid(row=0, column=0, padx=5, pady=5)
-        
-        self.saveAs = ttk.Button(self.saveFrame, text="Save As..", command=self.browse_save, style="Accent.TButton")
+
+        self.saveAs = ttk.Button(
+            self.saveFrame,
+            text="Save As..",
+            command=self.browse_save,
+            style="Accent.TButton",
+        )
         self.saveAs.grid(row=0, column=1, padx=3)
 
     def display_image(self, img: Image.Image):
@@ -462,16 +465,18 @@ class Process(tk.Toplevel):
         )
         self.kernelOffset.grid(row=4, column=1, padx=5, pady=5, sticky="ew")
         ttk.Label(self.filtersFrame, text="Offset").grid(row=4, column=0)
-        
+
         self.scaleDisableVar = tk.BooleanVar()
-        self.scaleDisable = ttk.Checkbutton(self.filtersFrame, text="Disable Scale", variable=self.scaleDisableVar)
+        self.scaleDisable = ttk.Checkbutton(
+            self.filtersFrame, text="Disable Scale", variable=self.scaleDisableVar
+        )
         self.scaleDisable.grid(row=5, column=0, columnspan=3, pady=10)
-        
+
         self.scaleDisableVar.trace_add("write", self.toggle_scale)
-    
+
     def toggle_scale(self, *args):
         state_map = {True: "disabled", False: "normal"}
-        
+
         self.kernelScale.config(state=state_map[self.scaleDisableVar.get()])
 
     def update_kernel(self, event=None):
@@ -493,7 +498,7 @@ class Process(tk.Toplevel):
                 self.kernel_entries.append(entry)
 
     def validate_integer(self, val):
-        if val in {'', '-', '+'}:
+        if val in {"", "-", "+"}:
             return True
 
         try:
@@ -621,6 +626,7 @@ class Process(tk.Toplevel):
             int(self.unsharp_percent.get()),
             int(self.unsharp_thres.get()),
         ]
+
     def fetch_kernel(self):
         try:
             kernel = [float(entry.get()) for entry in self.kernel_entries]
@@ -630,7 +636,11 @@ class Process(tk.Toplevel):
         return [
             (self.k_size,) * 2,
             kernel,
-            round(self.kernelScale.get(), 2) if not self.scaleDisableVar.get() else None,
+            (
+                round(self.kernelScale.get(), 2)
+                if not self.scaleDisableVar.get()
+                else None
+            ),
             round(self.kernelOffset.get(), 2),
         ]
 
@@ -664,28 +674,22 @@ class Process(tk.Toplevel):
                 ("Bitmap Image", "*.bmp"),
                 ("All Files", "*.*"),
             ),
-            initialdir=cwd, # change to os.path.expanduser("~") upon deployment
+            initialdir=cwd,  # change to os.path.expanduser("~") upon deployment
             title="Save image as..",
-        ) # returns the path selected by user
-        
+        )  # returns the path selected by user
+
         if file_path:
             self.saveEntry.delete(0, tk.END)
             self.saveEntry.insert(0, file_path)
-    
-    def save_image(self): # <= save image using the saveEntry path and error handling here
+
+    def save_image(
+        self,
+    ):  # <= save image using the saveEntry path and error handling here
         pass
+
 
 def str_to_int(value):
     return round(float(value))
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == "__main__":
