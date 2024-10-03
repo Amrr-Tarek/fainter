@@ -195,7 +195,7 @@ class Process:
             command=self.open_another,
             style="Accent.TButton",
         )
-        self.anotherButton.grid(row=0, column=2, padx=5, pady=10)
+        self.anotherButton.grid(row=0, column=1, padx=5, pady=10)
 
         self.processed_image = None
 
