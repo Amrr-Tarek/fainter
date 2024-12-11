@@ -173,96 +173,106 @@ class Process:
         self.master = self.parent.root
 
         self.img_path = img_path.strip()
-        self.original_image = Image.open(self.img_path).convert("RGB")
 
-        self.frame = ttk.Frame(self.master)
-        self.frame.pack()
+        try:
+            self.original_image = Image.open(self.img_path).convert("RGB")
 
-        self.imageFrame = ttk.LabelFrame(self.frame, text="Image")
-        self.imageFrame.grid(row=0, column=0, padx=30, pady=15)
+        except Image.UnidentifiedImageError:
+            print("Image may be corrupted!")  # Should be optimized for user experience
+            self.parent.start(self.path)
 
-        self.buttonsFrame = ttk.Frame(self.imageFrame)
-        self.buttonsFrame.grid(row=1)
+        else:
+            self.frame = ttk.Frame(self.master)
+            self.frame.pack()
 
-        self.backButton = ttk.Button(
-            self.buttonsFrame, text="Back", command=self.clear_widgets
-        )
-        self.backButton.grid(row=0, column=0, padx=5, pady=10)
+            self.imageFrame = ttk.LabelFrame(self.frame, text="Image")
+            self.imageFrame.grid(row=0, column=0, padx=30, pady=15)
 
-        self.anotherButton = ttk.Button(
-            self.buttonsFrame,
-            text="Open Image",
-            command=self.open_another,
-            style="Accent.TButton",
-        )
-        self.anotherButton.grid(row=0, column=1, padx=5, pady=10)
+            self.buttonsFrame = ttk.Frame(self.imageFrame)
+            self.buttonsFrame.grid(row=1)
 
-        self.processed_image = None
+            self.backButton = ttk.Button(
+                self.buttonsFrame, text="Back", command=self.clear_widgets
+            )
+            self.backButton.grid(row=0, column=0, padx=5, pady=10)
 
-        self.imageCanvas = tk.Canvas(self.imageFrame)
-        self.imageCanvas.grid(row=0, column=0, padx=10, pady=10)
-        self.display_image(self.original_image)
+            self.anotherButton = ttk.Button(
+                self.buttonsFrame,
+                text="Open Image",
+                command=self.open_another,
+                style="Accent.TButton",
+            )
+            self.anotherButton.grid(row=0, column=1, padx=5, pady=10)
 
-        self.secondFrame = ttk.Frame(self.frame)
-        self.secondFrame.grid(row=0, column=1, padx=30, pady=15)
+            self.processed_image = None
 
-        self.dropFrame = ttk.LabelFrame(self.secondFrame, text="Select a filter")
-        self.dropFrame.grid(row=0, column=0, padx=10, pady=10)
+            self.imageCanvas = tk.Canvas(self.imageFrame)
+            self.imageCanvas.grid(row=0, column=0, padx=10, pady=10)
+            self.display_image(self.original_image)
 
-        self.filtersDrop = ttk.Combobox(
-            self.dropFrame,
-            values=[
-                "Box Blur",
-                "Gaussian Blur",
-                "Unsharp Mask",
-                "Kernel",
-                "Rank Filter",
-                "Mode Filter",
-            ],
-            state="readonly",
-        )
-        self.filtersDrop.bind("<<ComboboxSelected>>", self.update_ui)
-        self.filtersDrop.grid(row=0, column=0, padx=10, pady=10)
+            self.secondFrame = ttk.Frame(self.frame)
+            self.secondFrame.grid(row=0, column=1, padx=30, pady=15)
 
-        self.applyFrame = ttk.LabelFrame(self.secondFrame, text="Apply Filters")
-        self.applyFrame.grid(row=1, column=0, padx=10, pady=10)
+            self.dropFrame = ttk.LabelFrame(self.secondFrame, text="Select a filter")
+            self.dropFrame.grid(row=0, column=0, padx=10, pady=10)
 
-        self.filtersFrame = ttk.Frame(self.applyFrame)
-        self.filtersFrame.grid(row=0, column=1, padx=10, pady=10)
-        self.validate_int = (self.filtersFrame.register(self.validate_integer), "%P")
+            self.filtersDrop = ttk.Combobox(
+                self.dropFrame,
+                values=[
+                    "Box Blur",
+                    "Gaussian Blur",
+                    "Unsharp Mask",
+                    "Kernel",
+                    "Rank Filter",
+                    "Mode Filter",
+                ],
+                state="readonly",
+            )
+            self.filtersDrop.bind("<<ComboboxSelected>>", self.update_ui)
+            self.filtersDrop.grid(row=0, column=0, padx=10, pady=10)
 
-        self.buttonsFrame = ttk.Frame(self.applyFrame)
-        self.buttonsFrame.grid(row=1, column=1, padx=5, pady=5)
+            self.applyFrame = ttk.LabelFrame(self.secondFrame, text="Apply Filters")
+            self.applyFrame.grid(row=1, column=0, padx=10, pady=10)
 
-        self.applyButton = ttk.Button(
-            self.buttonsFrame,
-            text="Apply Fitler",
-            command=self.apply_filter,
-            style="Accent.TButton",
-        )
-        self.applyButton.grid(row=2, column=0, padx=2, pady=2)
+            self.filtersFrame = ttk.Frame(self.applyFrame)
+            self.filtersFrame.grid(row=0, column=1, padx=10, pady=10)
+            self.validate_int = (
+                self.filtersFrame.register(self.validate_integer),
+                "%P",
+            )
 
-        self.resetButton = ttk.Button(
-            self.buttonsFrame,
-            text="Reset Filter",
-            command=lambda: self.display_image(self.original_image),
-        )
-        self.resetButton.grid(row=2, column=1, padx=2, pady=2)
+            self.buttonsFrame = ttk.Frame(self.applyFrame)
+            self.buttonsFrame.grid(row=1, column=1, padx=5, pady=5)
 
-        self.saveFrame = ttk.LabelFrame(self.secondFrame, text="Save Image As")
-        self.saveFrame.columnconfigure(0, weight=1)
-        self.saveFrame.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
+            self.applyButton = ttk.Button(
+                self.buttonsFrame,
+                text="Apply Fitler",
+                command=self.apply_filter,
+                style="Accent.TButton",
+            )
+            self.applyButton.grid(row=2, column=0, padx=2, pady=2)
 
-        self.saveEntry = ttk.Entry(self.saveFrame)
-        self.saveEntry.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+            self.resetButton = ttk.Button(
+                self.buttonsFrame,
+                text="Reset Filter",
+                command=lambda: self.display_image(self.original_image),
+            )
+            self.resetButton.grid(row=2, column=1, padx=2, pady=2)
 
-        self.saveAs = ttk.Button(
-            self.saveFrame,
-            text="Save As..",
-            command=self.browse_save,
-            style="Accent.TButton",
-        )
-        self.saveAs.grid(row=0, column=1, padx=3, sticky="ew")
+            self.saveFrame = ttk.LabelFrame(self.secondFrame, text="Save Image As")
+            self.saveFrame.columnconfigure(0, weight=1)
+            self.saveFrame.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
+
+            self.saveEntry = ttk.Entry(self.saveFrame)
+            self.saveEntry.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+
+            self.saveAs = ttk.Button(
+                self.saveFrame,
+                text="Save As..",
+                command=self.browse_save,
+                style="Accent.TButton",
+            )
+            self.saveAs.grid(row=0, column=1, padx=3, sticky="ew")
 
     def clear_widgets(self):
         self.frame.destroy()
@@ -729,7 +739,7 @@ class Process:
 
     def browse_save(self) -> str:
         file_path = filedialog.asksaveasfilename(
-            parent=self,
+            # parent=self,
             # defaultextension=".png",
             filetypes=(
                 ("*", "*.png;*.jpg;*.jpeg;*.ico;*.bmp"),
@@ -746,10 +756,16 @@ class Process:
         if file_path:
             self.saveEntry.delete(0, tk.END)
             self.saveEntry.insert(0, file_path)
+            self.save_image()
 
     def save_image(self):
         # save image using the saveEntry path and error handling here
-        pass
+        save_path = self.saveEntry.get().strip()
+        (
+            self.processed_image.save(save_path)
+            if self.processed_image
+            else self.original_image.save(save_path)
+        )
 
 
 def browse_open():

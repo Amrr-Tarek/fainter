@@ -85,7 +85,7 @@ kernel_presets = {
 # fmt: on
 
 
-def process_image(img: Image.Image, filter_name: str, values: list = None):
+def process_image(img: Image.Image, filter_name: str, values: list = None) -> Image.Image:
     myDict = {
         "Box Blur": apply_box,
         "Gaussian Blur": apply_gaussian,
