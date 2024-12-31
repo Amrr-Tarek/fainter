@@ -1,7 +1,7 @@
 # Fainter
 #### Video Demo:  https://youtu.be/P6SHJapxqoI
 #### Description:
-Fainter is a Windows desktop application developed in Python using Tkinter, designed for applying a vareity of image filters.
+Fainter is a Windows desktop application developed in Python using Tkinter, designed for applying a variety of image filters.
 
 Features:
 - User-Friendly Interface
