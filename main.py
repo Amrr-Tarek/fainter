@@ -799,7 +799,7 @@ def check_path(file_path):
         messagebox.showwarning("File not found!", "Provided file doesn't exist!")
         return
 
-    if format not in {"png"}:
+    if format not in supported:
         messagebox.showwarning("Alert", "Unsupported file extension!")
         return
 

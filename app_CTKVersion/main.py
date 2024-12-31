@@ -528,7 +528,7 @@ class Process:
         self.scale1.grid(row=0, column=1)
 
     def apply_filters(self, radius):
-        new_img = self.img.preset(ImageFilter.BoxBlur(radius))
+        new_img = self.img.filter(ImageFilter.BoxBlur(radius))
         img_ctk = ctk.CTkImage(light_image=new_img, dark_image=new_img, size=(400,400))
         self.photoLabel.configure(image=img_ctk)
 
