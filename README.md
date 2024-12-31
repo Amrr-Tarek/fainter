@@ -20,7 +20,7 @@ Features:
 				- Radius
 				- Percent (Intensity)
 				- Threshold
-		- **Custom Kernel Filters:** This feature allows users o design their own convolution kernels, enabling a wide range of effects, such as the presets embedded in the app as follows:
+		- **Custom Kernel Filters:** This feature allows users to design their own convolution kernels, enabling a wide range of effects, such as the presets embedded in the app as follows:
 			- **Presets:**
 				- Blur
 				- Contour
